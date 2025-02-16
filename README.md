@@ -50,23 +50,27 @@ yarn build
 Архитектурный паттерн: Model-View-Presenter.
 Код приложения разделён на:
 
-- слой данных, отвечает за хранение и изменение данных;
-- слой отображения, отвечает за отображение данных на странице;
+- слой данных (model), отвечает за хранение и изменение данных;
+- слой отображения (view), отвечает за отображение данных на странице;
 - презентер, отвечает за связь между отображением и слоем данных.
 
 ## Типы данных, используемые в приложении
 
-Модель карточек:
+Модель для работы с массивом товаров:
 
 ```
-interface ICardsData {
-	items: ICard[];
+interface IAppModel {
+	products: ICard[];
+	preview: string | null;
+	isBlocked: boolean;
+	setItems(items: ICard[]): void;
+	setPreview(id: string): void;
 	getItem(cardId: string): ICard;
 	getItems(): ICard[];
 }
 ```
 
-Карточка товара:
+Товар:
 
 ```
 interface ICard {
@@ -75,18 +79,21 @@ interface ICard {
 	image: string;
 	title: string;
 	category: string;
-	price: number;
+	price: number| null;
 }
 ```
 
 Корзина:
 
 ```
-interface IBasket extends ICardsData {
+interface IBasketModel {
+	products: ICard[];
 	counter: number;
 	addItem(cardId: string): number;
 	removeItem(cardId: string): void;
 	getTotalPrice(): number;
+	isBasketProduct(id: string): boolean;
+	getCounter(): number;
 }
 ```
 
@@ -98,8 +105,6 @@ interface IUserData {
 	email: string;
 	phone: string;
 	address: string;
-	clear(): void;
-	getUserData(): IUserData;
 }
 ```
 
@@ -112,47 +117,88 @@ interface IOrder extends IUserData {
 }
 ```
 
-Отображение карточки:
+Типы ответа сервера после отправки заказа:
 
 ```
-interface ICardView {
+type TSuccessOrderResponse = {
 	id: string;
-	cardTemplate: HTMLTemplateElement;
-	element: HTMLElement;
-	description: HTMLElement;
-	image: HTMLImageElement;
-	title: HTMLElement;
-	category: HTMLElement;
-	price: HTMLElement;
-	render(): HTMLElement;
+	total: number;
 }
 ```
 
-Главная страницы:
-
 ```
-interface IPage {
-	container: HTMLElement;
-	basketCounter: HTMLElement;
-	render(items: ICard[]): void;
-	showBasketAmount(items: number): void
-}
-```
-
-Модальное окно:
-
-```
-interface IModal {
-	template: HTMLTemplateElement;
-	closeButton: HTMLButtonElement;
-	submitButton: HTMLButtonElement;
-	content: HTMLElement;
-	open(): void;
-	close(): void;
+type TFailOrderResponse = {
+	error: string;
 }
 ```
 
 ### Базовый код
+
+#### Класс `Component<T>`
+
+Абстрактный класс, наследуемый классами слоя отображения. Реализует методы создания элемента с помощью шаблона,\
+его обновления и перерисовки, а также удаления из разметки. Конструктор класса принимает объект типа T,\
+для определения и последующего использования его данных при заполнении и рендеринге элемента.
+
+Конструктор:
+
+```
+constructor(template: HTMLTemplateElement, data: T, events: IEvents) {
+	this.template = template;
+	this.element = this.createElement(data);
+	this.events = events;
+}
+```
+
+Поля:
+
+- `protected template: HTMLTemplateElement` — ссылка на шаблон элемента;
+- `protected element: HTMLElement | HTMLButtonElement` — ссылка на разметку элемента;
+- `protected events: IEvents` — экземпляр EventEmitter;
+
+Методы:
+
+- `protected abstract createElement(data: T): HTMLElement | HTMLButtonElement` — создаёт элемент и заполняет его первоначальными данными;
+- `render(): HTMLElement` - возвращает разметку элемента;
+- `update(data: Partial<T>): void` - обновляет данные элемента и его разметку;
+- `remove(): void` — удаляет элемент из разметки;
+
+Пример создания класса Card используя `Component<T>`:
+
+```
+class Card extends Component<ICard> {
+	protected category?: HTMLElement;
+	protected title?: HTMLElement;
+	protected image?: HTMLImageElement;
+	protected description?: HTMLElement;
+	protected price?: HTMLElement;
+	protected addToBasketButton?: HTMLButtonElement;
+
+	constructor(template: HTMLTemplateElement, data: ICard, events: IEvents) {
+		super(template, data, events);
+	}
+
+	protected createElement(data: ICard) {
+		const element = this.template.content.firstElementChild!.cloneNode(true) as HTMLElement;
+		 // имена классов разметки взяты для примера
+		this.category = element.querySelector('.category');
+		this.title = element.querySelector('.title');
+		this.image = element.querySelector('.image') as HTMLImageElement | null;
+		this.description = element.querySelector('.description');
+		this.price = element.querySelector('.price');
+		this.addToBasketButton = element.querySelector('.button');
+
+		if (this.category) this.category.textContent = data.category;
+		if (this.title) this.title.textContent = data.title;
+		if (this.image) this.image.src = data.image;
+		if (this.description) this.description.textContent = data.description;
+		if (this.price) this.price.textContent = data.price !== null ? `${data.price}` : 'Бесценно';
+		if(this.addToBasketButton) this.addToBasketButton.addEventListener('click', () => this.events.emit('item:select', this));
+
+		return element;
+	}
+}
+```
 
 #### Класс API
 
@@ -176,17 +222,21 @@ interface IModal {
 
 ### Слой данных
 
-#### Класс CardsData
+#### Класс AppModel
 
 Класс необходим для работы с массивом карточек. Конструктор класса принимает экземпляр класса EventEmitter и массив карточек.\
 
 Поля:
 
-- `items: ICard[]` — массив карточек;
+- `products: ICard[]` — массив карточек;
+- `preview: string | null` — id объекта товара, отображаемого в модальном окне;
+- `isBlocked: boolean` — заблокирована ли страница, если сервер вернул ошибку;
 - `events: IEvents` — экземпляр класса `EventEmitter` для инициализации событий при изменении данных;
 
 Методы:
 
+- `setItems(items: ICard[]): void` — записывает полученный от сервера массив данных;
+- `setPreview(id: string): void` — сохраняет id товара, открытого в модальном окне;
 - `getItem(cardId: string): ICard` — возвращает отдельно взятую карточку;
 - `getItems(): ICard[]` — возвращает массив карточек;
 
@@ -202,142 +252,116 @@ interface IModal {
 - `phone: string` — номер телефона пользователя;
 - `address: string` — адрес пользователя;
 - `events: IEvents` — экземпляр класса `EventEmitter` для инициализации событий при изменении данных;
+- `errors: Record<string, string>` — объект, хранящий элементы ошибок, привязаных полям, где `string` — поле, `HTMLElement` — элемент ошибки;
 
 Методы: геттеры и сеттеры для сохранения/получения данных пользователя, а также:
 
-- `clear(): void` — очистит данные пользователя;
-- `getUserData(): IUserData` — вернёт объект с данными пользователя;
+- `setError(data: {fieldName: string, errorMessage: string}): void` — добавляет ошибку в поле errors;
+- `validate(value): boolean` — валидация данных пользователя;
 
-#### Класс Basket
+#### Класс BasketModel
 
-Расширяет класс CardsData, реализуя методы добавления товара, подсчёта количества и общей стоиомости всех товаров в корзине.\
-Конструктор класса принимает инстант брокера событий.\
+Предназначен для работы с данными корзины. Реализует методы добавления товара, подсчёта количества и общей стоиомости\
+всех товаров в корзине.Конструктор класса принимает инстант брокера событий.\
+
+Поля:
+
+- `_products: ICard[]` — массив карточек;
+- `events: IEvents` — экземпляр класса `EventEmitter` для инициализации событий при изменении данных;
 
 Методы:
 
 - `addItem(cardId: string): number` — добавит в корзину товар и вернёт общее количество товаров;
 - `removeItem(cardId: string): void` — удалит товар из корзины и вызовет событие изменения корзины;
 - `getTotalPrice(): number` — вернёт сумму всех товаров в корзине;
-- `get counter(): number` — вернёт количество товаров в корзине;
+- `isBasketProduct(id: string): boolean` — есть ли в корзине товар с таким id;
+- `getCounter(): number` — вернёт количество товаров в корзине;
+- `get products(): ICard[]` — вернёт массив продуктов, добавленных в корзину;
 
 ### Слой отображения
 
 Отвечают за отображение и взаимодействие с пользователем.
 
+#### Класс Page
+
+Наследует класс `Component<T>`. Предназначен для работы с контейнером карточек на главной странице.
+Конструктор принимает экземпляр брокера событий, контейнер для карточек и контейнер кнопки корзины.
+
+Поля:
+
+- `container: HTMLElement` - контейнер с карточками;
+- `protected basketCounter: HTMLElement` - элемент счётчика товаров;
+
+Методы:
+
+- `showBasketAmount(items: number): void` — отобразит в иконке корзины количество добавленных товаров;
+
+#### Класс `Modal<T extends HTMLElement>`
+
+Необходим для реализации модального окна.\
+Содержит методы для открытия и закрытия модального окна (вставки в него контента), устанавливает слушатели на клавишу ESC (закрытие мод.окна при нажатии), на оверлей и кнопку-крестик (закрытие при клике).\
+
+Поля:
+
+- `protected container: HTMLElement` — контейнер модального окна;
+- `protected _element: T;` — содержимое модального окна (контент);
+- `closeButton: HTMLButtonElement` — кнопка закрытия;
+- `submitButton: HTMLButtonElement` — кнопка подтверждения действия;
+- `events: IEvents` — экземпляр класса `EventEmitter` для инициализации событий при изменении данных;
+
+Методы:
+
+- `open(element: HTMLElement): void` - вставляет контент в модальное окно и открывает его;
+- `close(): void` — закрывает модальное окно, очищая контент;
+- `set element(content: HTMLElement): void` — вставляет элемент в контейнер модального окна;
+
+#### Класс Form
+
+Наследует класс `Component<T>`. Предназначен для реализации отображения формы. При сабмите инициирует событие, в которое передаёт объект с данными из полей ввода. При изменении данных в поле ввода также инициирует событие изменения данных. Управляет активностью кнопки подтверждения.
+
+Поля:
+
+- `formName: string` — название формы;
+- `inputs: HTMLCollection<HTMLInputElement>` — коллекция всех полей ввода формы;
+- `submitButton: HTMLButtonElement` — кнопка подтверждения;
+
+Методы:
+
+- `toggleButtonState(formValid: boolean): void` — включает/отключает кнопку подтверждения;
+- `showInputError(fieldName: string, errorMessage: string): void` — отображает текст ошибки;
+- `hideInputError(fieldName: string)` — скрывает текст ошибки под указанным полем ввода;
+- `close(): void` — расширяет родительский метод, при закрытии модального окна дополнительно очищая поля ввода и деактивируя кнопку сохранения;
+- `get form(): HTMLFormElement` — геттер для получения элемента формы;
+
 #### Класс Card
 
-Предназначен для работы с отображением карточки и её взаимодействием с пользователем.
-Конструктор принимает объект карточки, шаблон карточки и экземпляр брокера событий.
+Наследует класс `Component<T>`. Отвечает за работу с различными шаблонами карточек товара, их отображением и взаимодействие с пользователем.\
+Конструктор принимает объект ICard, шаблон и экземпляр брокера событий.
 
 Поля:
 
 - `_id: string` — идентификатор товара;
-- `cardTemplate: HTMLTemplateElement` — шаблон карточки;
 - `element: HTMLElement` — элемент карточки;
 - `description: HTMLElement` — описание товара;
 - `image: HTMLImageElement` — изображение товара;
 - `title: HTMLElement` — название товара;
 - `category: HTMLElement` — категория товара;
 - `price: HTMLElement` — цена товара;
-- `events: IEvents` — экземпляр брокера событий;
+- `addToBasketButton: HTMLButtonElement` — кнопка «добавить в корзину»
 
 Методы:
 
-- `render(): HTMLElement` — метод возвращает готовый элемент карточки с установленным на неё слушателем клика;
 - `get id(): string` — возвращает \_id карточки;
+- `toggleButtonState(cardId): void` — отключает/включает кнопку «В корзину», если товар уже был добавлен в корзину;
 
-#### Класс Page
+#### Класс Basket
 
-Предназначен для работы с контейнером карточек на главной странице.
-Конструктор принимает экземпляр брокера событий, контейнер для карточек и контейнер кнопки корзины.
-
-Поля:
-
-- `container: HTMLElement` - контейнер с карточками;
-- `basketCounter: HTMLElement` - элемент, отображающий количество добавленных в корзину товаров;
-
-Методы:
-
-- `render(items: ICard[]): void` - выведет карточки в контейнер;
-- `showBasketAmount(items: number): void` — отобразит в иконке корзины количество добавленных товаров;
-
-#### Класс Modal
-
-Необходим для реализации модального окна.\
-Содержит методы для открытия и закрытия модального окна (вставки в него контента), устанавливает слушатели на клавишу ESC (закрытие мод.окна при нажатии), на оверлей и кнопку-крестик (закрытие при клике).\
-
-Конструктор класса:
-`constructor(container: HTMLElement, templateId: string, events: IEvents)`, где:
-
-- `container: HTMLElement` — контейнер, в котором размещаются модальные окна;
-- `id:string` — айди шаблона, который должен быть найден в разметке;
-- `events: IEvents` — экземпляр брокера событий;
-
-Поля:
-
-- `template: HTMLTemplateElement` — шаблон модального окна;
-- `closeButton: HTMLButtonElement` — кнопка закрытия;
-- `submitButton: HTMLButtonElement` — кнопка подтверждения действия;
-- `content: HTMLElement` - контейнер с контентом модального окна;
-- `events: IEvents` — экземпляр класса `EventEmitter` для инициализации событий при изменении данных;
-
-Методы:
-
-- `open(): void` - открывает модальное окно, вставляя контент-контейнер;
-- `close(): void` — закрывает модального окно, очищая контент-контейнер;
-
-#### Класс ModalWithForm
-
-Наследует класс `Modal`. Предназначен для реализации модального окна с формой. При сабмите инициирует событие, в которое передаёт объект с данными из полей ввода. При изменении данных в поле ввода также инициирует событие изменения данных. Предоставляет методы для отображения ошибок и управляет активностью кнопки подтверждения.
-Конструктор принимает инстант брокера событий.
-
-Поля:
-
-- `submitButton: HTMLButtonElement` — кнопка подтверждения;
-- `form: HTMLFormElement` — элемент формы;
-- `formName: string` — название формы;
-- `inputs: HTMLCollection<HTMLInputElement>` — коллекция всех полей ввода формы;
-- `errors: Record<string, HTMLElement>` — объект, хранящий элементы ошибок, привязаных к инпутам, где `string` — имя инпута, `HTMLElement` — элемент ошибки;
-
-Методы:
-
-- `toggleButtonState(formValid: boolean): void` — включает/отключает кнопку подтверждения;
-- `setError(data: {fieldName: string, fieldValue: string, errorMessage: string}): void` — добавляет ошибку в поле errors;
-- `showInputError(fieldName: string, errorMessage: string): void` — отображает текст ошибки;
-- `hideInputError(fieldName: string)` — скрывает текст ошибки под указанным полем ввода;
-- `close(): void` — расширяет родительский метод, при закрытии модального окна дополнительно очищая поля ввода и деактивируя кнопку сохранения;
-- `get form(): HTMLFormElement` — геттер для получения элемента формы;
-
-#### Класс ModalWithItem
-
-Расширяет класс Modal. Предназначен для реализации модального окна товара. При открытии модального окна получает объект карточки, по которой кликнули.
-
-Поля класса представляют следующие данные:
-
-- `image: HTMLImageElement` — элемент разметки, отображающий изображение товара;
-- `category: HTMLElement` — элемент разметки категории товара;
-- `name: HTMLElement` — элемент разметки имени товара;
-- `description: HTMLElement` — элемент разметки описания товара;
-- `cost: HTMLElement` — элемент разметки цены товара;
-
-Методы:
-
-- `open(item: ICard): void` — расширяет родительский метод, принимая объект карточки, который используется для заполнения модального окна;
-- `close(): void` — расширяет родительский метод, выполняя дополнительно очистку модального окна при закрытии;
-- `toggleButtonState(cardId): void` — отключает/включает кнопку, если товар уже был добавлен в корзину;
-
-#### Класс ModalWithBasket
-
-Расширяет класс Modal. Предназначен для реализации модального окна корзины.
+Наследует класс `Component<T>`. Предназначен для отображения модального окна корзины.
 
 Поля:
 
 - `itemsList: HTMLElement` — контейнер списка товаров;
 - `itemsCost: HTMLElement` — элемент разметки, отображающий общую стоимость товаров;
-
-Методы:
-
-- `render(items: ICard[]): void` — заполняет корзину добавленными в неё товарами, отобразив общую стоимость;
 
 ### Слой коммуникации
 

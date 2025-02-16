@@ -1,5 +1,9 @@
-export interface ICardsData {
-	items: ICard[];
+export interface IAppModel {
+	products: ICard[];
+	preview: string | null;
+	isBlocked: boolean;
+	setItems(items: ICard[]): void;
+	setPreview(id: string): void;
 	getItem(cardId: string): ICard;
 	getItems(): ICard[];
 }
@@ -10,14 +14,17 @@ export interface ICard {
 	image: string;
 	title: string;
 	category: string;
-	price: number;
+	price: number | null;
 }
 
-export interface IBasket extends ICardsData {
+export interface IBasketModel {
+	products: ICard[];
 	counter: number;
 	addItem(cardId: string): number;
 	removeItem(cardId: string): void;
 	getTotalPrice(): number;
+	isBasketProduct(id: string): boolean;
+	getCounter(): number;
 }
 
 export interface IUserData {
@@ -25,8 +32,6 @@ export interface IUserData {
 	email: string;
 	phone: string;
 	address: string;
-	clear(): void;
-	getUserData(): IUserData;
 }
 
 export interface IOrder extends IUserData {
@@ -34,30 +39,11 @@ export interface IOrder extends IUserData {
 	items: string[]; // массив с идентификаторами товаров
 }
 
-export interface ICardView {
+type TSuccessOrderResponse = {
 	id: string;
-	cardTemplate: HTMLTemplateElement;
-	element: HTMLElement;
-	description: HTMLElement;
-	image: HTMLImageElement;
-	title: HTMLElement;
-	category: HTMLElement;
-	price: HTMLElement;
-	render(): HTMLElement;
-}
+	total: number;
+};
 
-export interface IPage {
-	container: HTMLElement;
-	basketCounter: HTMLElement;
-	render(items: ICard[]): void;
-	showBasketAmount(items: number): void;
-}
-
-export interface IModal {
-	template: HTMLTemplateElement;
-	closeButton: HTMLButtonElement;
-	submitButton: HTMLButtonElement;
-	content: HTMLElement;
-	open(): void;
-	close(): void;
-}
+type TFailOrderResponse = {
+	error: string;
+};
