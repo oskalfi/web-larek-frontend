@@ -163,43 +163,6 @@ constructor(template: HTMLTemplateElement, data: T, events: IEvents) {
 - `update(data: Partial<T>): void` - обновляет данные элемента и его разметку;
 - `remove(): void` — удаляет элемент из разметки;
 
-Пример создания класса Card используя `Component<T>`:
-
-```
-class Card extends Component<ICard> {
-	protected category?: HTMLElement;
-	protected title?: HTMLElement;
-	protected image?: HTMLImageElement;
-	protected description?: HTMLElement;
-	protected price?: HTMLElement;
-	protected addToBasketButton?: HTMLButtonElement;
-
-	constructor(template: HTMLTemplateElement, data: ICard, events: IEvents) {
-		super(template, data, events);
-	}
-
-	protected createElement(data: ICard) {
-		const element = this.template.content.firstElementChild!.cloneNode(true) as HTMLElement;
-		 // имена классов разметки взяты для примера
-		this.category = element.querySelector('.category');
-		this.title = element.querySelector('.title');
-		this.image = element.querySelector('.image') as HTMLImageElement | null;
-		this.description = element.querySelector('.description');
-		this.price = element.querySelector('.price');
-		this.addToBasketButton = element.querySelector('.button');
-
-		if (this.category) this.category.textContent = data.category;
-		if (this.title) this.title.textContent = data.title;
-		if (this.image) this.image.src = data.image;
-		if (this.description) this.description.textContent = data.description;
-		if (this.price) this.price.textContent = data.price !== null ? `${data.price}` : 'Бесценно';
-		if(this.addToBasketButton) this.addToBasketButton.addEventListener('click', () => this.events.emit('item:select', this));
-
-		return element;
-	}
-}
-```
-
 #### Класс API
 
 Содержит базовую логику отправки запросов. В конструктор передаётся адрес сервера и опционально — объект с заголовками запроса.
@@ -247,10 +210,7 @@ class Card extends Component<ICard> {
 
 Поля:
 
-- `payment: string` — метод оплаты;
-- `email: string` — эл.почта пользователя;
-- `phone: string` — номер телефона пользователя;
-- `address: string` — адрес пользователя;
+- `data: IUserData` — объект с данными пользователя;
 - `events: IEvents` — экземпляр класса `EventEmitter` для инициализации событий при изменении данных;
 - `errors: Record<string, string>` — объект, хранящий элементы ошибок, привязаных полям, где `string` — поле, `HTMLElement` — элемент ошибки;
 
@@ -258,6 +218,7 @@ class Card extends Component<ICard> {
 
 - `setError(data: {fieldName: string, errorMessage: string}): void` — добавляет ошибку в поле errors;
 - `validate(value): boolean` — валидация данных пользователя;
+- `clear(): void` — очистит данные пользователя;
 
 #### Класс BasketModel
 
@@ -299,7 +260,7 @@ class Card extends Component<ICard> {
 #### Класс `Modal<T extends HTMLElement>`
 
 Необходим для реализации модального окна.\
-Содержит методы для открытия и закрытия модального окна (вставки в него контента), устанавливает слушатели на клавишу ESC (закрытие мод.окна при нажатии), на оверлей и кнопку-крестик (закрытие при клике).\
+Содержит методы для открытия и закрытия модального окна, вставки в него контента, устанавливает слушатели на клавишу ESC (закрытие мод.окна при нажатии), на оверлей и кнопку-крестик (закрытие при клике).\
 
 Поля:
 
@@ -396,7 +357,7 @@ _Создаются классами отображения._
 - `item:open` - нажатие на карточку;
 - `item:select` - нажатие на кнопку «в корзину» в модальном окне карточки;
 - `payment-method: changed` - выбор метода оплаты;
-- `address: changed` - изменение данных в поле с адресом;
+- `address:changed` - изменение данных в поле с адресом;
 - `modal-address:submit` - нажатие на кнопку «далее» в модальном окне с адресом доставки;
 - `email:changed` - изменение данных в поле с почтой;
 - `phone-number:changed` - изменение данных в поле с номером телефона;
@@ -406,8 +367,8 @@ _Создаются классами отображения._
 
 _Взаимодействия классов на примере добавления товара в корзину:_
 
-1. Слой отображения. В классе ModalWithItem навешивается слушатель события клика по кнопке «Добавить в корзину».
-2. Слой презентера. Клик вызывает обработчик события «item:selected» из слоя презентера. В обработчике события вызывается метод модели Basket.addItem(cardId).
+1. Слой отображения. В классе Card навешивается слушатель события клика по кнопке «Добавить в корзину».
+2. Слой презентера. Клик вызывает обработчик события «item:selected» из слоя презентера. В обработчике события вызывается метод модели BasketModel.addItem(cardId).
 3. Слой данных. Модель записывает новые данные, после чего происходит событие «basket:changed».
-4. Слой презентера. В обработчике «basket:changed» вызывается функция слоя отображения ModalWithBasket.render(items).
-5. Слой отображения. Метод render() отобразит карточки из массива Basket.items.
+4. Слой презентера. В обработчике «basket:changed» вызывается функция слоя отображения Basket.render(products).
+5. Слой отображения. Метод render() отобразит карточки из массива BasketModel._products_.
