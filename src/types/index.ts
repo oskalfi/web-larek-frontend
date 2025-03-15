@@ -1,3 +1,5 @@
+import { Card } from '../components/view/Card';
+
 export interface IAppModel {
 	products: ICard[];
 	preview: string | null;
@@ -20,7 +22,7 @@ export interface ICard {
 export interface IBasketModel {
 	products: ICard[];
 	counter: number;
-	addItem(cardId: string): number;
+	addItem(card: ICard): number;
 	removeItem(cardId: string): void;
 	getTotalPrice(): number;
 	isBasketProduct(id: string): boolean;
@@ -39,11 +41,21 @@ export interface IOrder extends IUserData {
 	items: string[]; // массив с идентификаторами товаров
 }
 
-type TSuccessOrderResponse = {
+export type TSuccessOrderResponse = {
 	id: string;
 	total: number;
 };
 
-type TFailOrderResponse = {
+export type TFailOrderResponse = {
 	error: string;
+};
+
+export interface IPaymentPickEvent {
+	event: Event;
+	allButtons: Record<string, HTMLButtonElement>;
+}
+
+export type AddToBasketEvent = {
+	records: ICard;
+	card: Card;
 };
