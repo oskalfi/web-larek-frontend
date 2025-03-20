@@ -1,3 +1,8 @@
+import {
+	cloneTemplate,
+	ensureAllElements,
+	ensureElement,
+} from '../../utils/utils';
 import { IEvents } from '../base/Events';
 
 // При сабмите
@@ -14,18 +19,19 @@ export class Form {
 
 	constructor(template: HTMLTemplateElement, events: IEvents) {
 		this.events = events;
-		this.element = template.content.firstElementChild!.cloneNode(
-			true
-		) as HTMLFormElement;
+		this.element = cloneTemplate(template) as HTMLFormElement;
 		// далее инициализация используемых элементов формы
 		this.formName = this.element.name;
-		this.submitButton = this.element.querySelector('.modal__actions .button');
+		this.submitButton = ensureElement(
+			'.modal__actions .button',
+			this.element
+		) as HTMLButtonElement;
 		this.inputs = this.element.querySelectorAll('.form__input');
-		this.element
-			.querySelectorAll('.form__input-error')
-			.forEach((errorElement) => {
+		ensureAllElements('.form__input-error', this.element).forEach(
+			(errorElement) => {
 				this.inputsErrors[errorElement.id] = errorElement as HTMLElement;
-			});
+			}
+		);
 
 		if (this.formName === 'order') {
 			this.paymentButtons = {

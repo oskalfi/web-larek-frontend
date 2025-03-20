@@ -1,3 +1,4 @@
+import { ensureElement } from '../../utils/utils';
 import { IEvents } from '../base/Events';
 
 export class Page {
@@ -7,9 +8,9 @@ export class Page {
 	protected events: IEvents;
 
 	constructor(events: IEvents) {
-		this.main = document.querySelector('.gallery');
-		this.basket = document.querySelector('.header__basket');
-		this.basketCounter = document.querySelector('.header__basket-counter');
+		this.main = ensureElement('.gallery');
+		this.basket = ensureElement('.header__basket') as HTMLButtonElement;
+		this.basketCounter = ensureElement('.header__basket-counter');
 		this.events = events;
 
 		this.basket.addEventListener('click', (evt) => {

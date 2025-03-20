@@ -2,6 +2,7 @@ import { ICard } from '../../types';
 import { CDN_URL } from '../../utils/constants';
 import { IEvents } from '../base/Events';
 import { Component } from '../base/Component';
+import { cloneTemplate } from '../../utils/utils';
 
 export class Card extends Component<ICard> {
 	protected template: HTMLTemplateElement;
@@ -21,7 +22,34 @@ export class Card extends Component<ICard> {
 	constructor(template: HTMLTemplateElement, data: ICard, events: IEvents) {
 		super(template, data, events);
 		this._id = data.id;
+		this.element = cloneTemplate(this.template);
 
+		this.category = this.element.querySelector('.card__category');
+		this.title = this.element.querySelector('.card__title');
+		this.image = this.element.querySelector(
+			'.card__image'
+		) as HTMLImageElement | null;
+		this.description = this.element.querySelector('.card__text');
+		this.price = this.element.querySelector('.card__price');
+		this.addToBasketButton = this.element.querySelector(
+			'.card_full .card__button'
+		) as HTMLButtonElement;
+		this.removeFromBasket = this.element.querySelector(
+			'.basket__item-delete'
+		) as HTMLButtonElement;
+		this.basketItemIndex = this.element.querySelector('.basket__item-index');
+
+		this.fillElement(data);
+
+		if (this.addToBasketButton)
+			this.addToBasketButton.addEventListener('click', () =>
+				this.events.emit('item:addToBasket', { records: data, card: this })
+			);
+		if (this.removeFromBasket) {
+			this.removeFromBasket.addEventListener('click', () => {
+				this.events.emit('item:removeFromBasket', data);
+			});
+		}
 		if (template.id === 'card-catalog') {
 			this.element.addEventListener('click', (evt) => {
 				this.events.emit('item:open', this);
@@ -29,26 +57,14 @@ export class Card extends Component<ICard> {
 		}
 	}
 
-	createElement(
-		data: ICard,
-		template: HTMLTemplateElement
-	): HTMLElement | HTMLButtonElement {
-		const element = template.content.firstElementChild!.cloneNode(
-			true
-		) as HTMLElement;
-		// вынесем по элементам разметку шаблона
-		this.category = element.querySelector('.card__category');
-		this.title = element.querySelector('.card__title');
-		this.image = element.querySelector(
-			'.card__image'
-		) as HTMLImageElement | null;
-		this.description = element.querySelector('.card__text');
-		this.price = element.querySelector('.card__price');
-		this.addToBasketButton = element.querySelector('.card_full .card__button');
-		this.removeFromBasket = element.querySelector('.basket__item-delete');
-		this.basketItemIndex = element.querySelector('.basket__item-index');
-
-		// если элемент есть в шаблоне, разместим в нём данные
+	fillElement(data: ICard): void {
+		// если элемент разметки имеется, заполним его данными товара
+		if (this.title) this.title.textContent = data.title;
+		if (this.image) this.image.src = `${CDN_URL}/${data.image}`;
+		if (this.description) this.description.textContent = data.description;
+		if (this.price)
+			this.price.textContent =
+				data.price != null ? `${data.price} синапсов` : 'Бесценно';
 		if (this.category) {
 			this.category.textContent = data.category;
 			// в зависимости от категории присвоим ей цвет
@@ -56,7 +72,6 @@ export class Card extends Component<ICard> {
 				case 'софт-скил':
 					this.category.classList.add('card__category_soft');
 					break;
-
 				case 'другое':
 					this.category.classList.add('card__category_other');
 					break;
@@ -70,23 +85,6 @@ export class Card extends Component<ICard> {
 					this.category.classList.add('card__category_hard');
 			}
 		}
-		if (this.title) this.title.textContent = data.title;
-		if (this.image) this.image.src = `${CDN_URL}/${data.image}`;
-		if (this.description) this.description.textContent = data.description;
-		if (this.price)
-			this.price.textContent =
-				data.price != null ? `${data.price} синапсов` : 'Бесценно';
-		if (this.addToBasketButton)
-			this.addToBasketButton.addEventListener('click', () =>
-				this.events.emit('item:addToBasket', { records: data, card: this })
-			);
-		if (this.removeFromBasket) {
-			this.removeFromBasket.addEventListener('click', () => {
-				this.events.emit('item:removeFromBasket', data);
-			});
-		}
-
-		return element; // вернём получившуюся разметку элемента
 	}
 
 	disableButtonAddToCart(): void {

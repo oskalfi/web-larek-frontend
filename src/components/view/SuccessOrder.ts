@@ -1,3 +1,4 @@
+import { ensureElement } from '../../utils/utils';
 import { IEvents } from '../base/Events';
 
 export class SuccessOrder {
@@ -8,10 +9,11 @@ export class SuccessOrder {
 
 	constructor(element: HTMLElement, events: IEvents) {
 		this._element = element;
-		this.orderDescription = element.querySelector(
-			'.order-success__description'
+		this.orderDescription = ensureElement(
+			'.order-success__description',
+			element
 		);
-		this.submitButton = element.querySelector('.button');
+		this.submitButton = ensureElement('.button', element) as HTMLButtonElement;
 		this.events = events;
 
 		this.submitButton.addEventListener('click', () => {

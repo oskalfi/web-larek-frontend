@@ -94,14 +94,17 @@ modalElement.addEventListener('click', (evt) => {
 
 // Далее пользовательские сценарии
 events.on<Card>('item:open', (card) => {
-	modalWindow.setContent(
-		card.createElement(appModel.getItem(card.id), modalCardTemplate)
+	const productInModal = new Card(
+		modalCardTemplate,
+		appModel.getItem(card.id),
+		events
 	);
+	modalWindow.setContent(productInModal.render());
 	if (
 		basketModel.isBasketProduct(card.id) ||
 		!appModel.getItem(card.id).price
 	) {
-		card.disableButtonAddToCart();
+		productInModal.disableButtonAddToCart();
 	}
 	modalWindow.open();
 });

@@ -7,14 +7,10 @@ export abstract class Component<T> {
 
 	constructor(template: HTMLTemplateElement, data: T, events: IEvents) {
 		this.template = template;
-		this.element = this.createElement(data, template);
 		this.events = events;
 	}
 
-	abstract createElement(
-		data: T,
-		template: HTMLTemplateElement
-	): HTMLElement | HTMLButtonElement;
+	abstract fillElement(data: T): void;
 
 	render(): HTMLElement {
 		return this.element;

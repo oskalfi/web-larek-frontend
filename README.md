@@ -161,9 +161,8 @@ export type AddToBasketEvent = {
 Конструктор:
 
 ```
-constructor(template: HTMLTemplateElement, data: T, events: IEvents) {
+constructor(template: HTMLTemplateElement, events: IEvents) {
 	this.template = template;
-	this.element = this.createElement(data);
 	this.events = events;
 }
 ```
@@ -176,7 +175,7 @@ constructor(template: HTMLTemplateElement, data: T, events: IEvents) {
 
 Методы:
 
-- `abstract createElement(data: T, template: HTMLTemplateElement): HTMLElement | HTMLButtonElement` — создаёт элемент и заполняет его первоначальными данными;
+- `abstract fillElement(data: T): void` — заполняет элемент данными, переданными в параметре;
 - `render(): HTMLElement` - возвращает разметку элемента;
 - `remove(): void` — удаляет элемент из разметки;
 
@@ -324,8 +323,8 @@ constructor(template: HTMLTemplateElement, data: T, events: IEvents) {
 
 #### Класс Card
 
-Наследует класс `Component<T>`. Отвечает за работу с различными шаблонами карточек товара, их отображением и взаимодействие с пользователем.\
-Конструктор принимает объект ICard, шаблон и экземпляр брокера событий.
+Наследует класс `Component<T>`. Отвечает за отображение компонента карточки и его взаимодействие с пользователем.\
+Конструктор принимает объект данных товара `ICard`, шаблон разметки и экземпляр брокера событий. Далее по шаблону производится поиск всех\ возможных элементов компонента. При наличии таковых в шаблоне, они заполняются данными из объекта `ICard`, после чего на интерактивные элементы добавляются слушатели событий.
 
 Поля:
 
@@ -342,8 +341,9 @@ constructor(template: HTMLTemplateElement, data: T, events: IEvents) {
 
 Методы:
 
-- `get id(): string` — возвращает \_id карточки;
+- `fillElement(data: ICard): void` — заполняет данными элементы, имеющиеся у компонента товара;
 - `toggleButtonState(cardId): void` — отключает/включает кнопку «В корзину», если товар уже был добавлен в корзину;
+- `get id(): string` — возвращает \_id карточки;
 
 #### Класс Basket
 
