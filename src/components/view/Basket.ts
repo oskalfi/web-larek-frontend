@@ -1,4 +1,4 @@
-import { IEvents } from '../base/events';
+import { IEvents } from '../base/Events';
 import { Card } from './Card';
 
 export class Basket {
@@ -8,10 +8,8 @@ export class Basket {
 	protected orderButton: HTMLButtonElement;
 	protected events: IEvents;
 
-	constructor(template: HTMLTemplateElement, events: IEvents) {
-		this._element = template.content.firstElementChild.cloneNode(
-			true
-		) as HTMLElement;
+	constructor(element: HTMLElement, events: IEvents) {
+		this._element = element;
 		this._list = this._element.querySelector('.basket__list');
 		this.totalAmount = this._element.querySelector('.basket__price');
 		this.orderButton = this._element.querySelector('.basket__button');

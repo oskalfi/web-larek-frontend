@@ -1,5 +1,5 @@
 import { IUserData } from '../../types';
-import { IEvents } from '../base/events';
+import { IEvents } from '../base/Events';
 
 export class UserData {
 	protected data: IUserData;

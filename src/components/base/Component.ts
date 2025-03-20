@@ -1,4 +1,4 @@
-import { IEvents } from '../base/events';
+import { IEvents } from './Events';
 
 export abstract class Component<T> {
 	protected template: HTMLTemplateElement;

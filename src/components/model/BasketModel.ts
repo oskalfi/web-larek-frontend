@@ -1,5 +1,5 @@
 import { ICard } from '../../types';
-import { IEvents } from '../base/events';
+import { IEvents } from '../base/Events';
 
 export class BasketModel {
 	protected _products: ICard[];

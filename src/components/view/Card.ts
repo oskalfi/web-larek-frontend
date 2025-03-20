@@ -1,7 +1,7 @@
 import { ICard } from '../../types';
 import { CDN_URL } from '../../utils/constants';
-import { IEvents } from '../base/events';
-import { Component } from './Component';
+import { IEvents } from '../base/Events';
+import { Component } from '../base/Component';
 
 export class Card extends Component<ICard> {
 	protected template: HTMLTemplateElement;
@@ -16,6 +16,7 @@ export class Card extends Component<ICard> {
 	protected price?: HTMLElement;
 	protected addToBasketButton?: HTMLButtonElement;
 	protected removeFromBasket?: HTMLButtonElement;
+	public basketItemIndex?: HTMLElement;
 
 	constructor(template: HTMLTemplateElement, data: ICard, events: IEvents) {
 		super(template, data, events);
@@ -45,9 +46,30 @@ export class Card extends Component<ICard> {
 		this.price = element.querySelector('.card__price');
 		this.addToBasketButton = element.querySelector('.card_full .card__button');
 		this.removeFromBasket = element.querySelector('.basket__item-delete');
+		this.basketItemIndex = element.querySelector('.basket__item-index');
 
 		// если элемент есть в шаблоне, разместим в нём данные
-		if (this.category) this.category.textContent = data.category;
+		if (this.category) {
+			this.category.textContent = data.category;
+			// в зависимости от категории присвоим ей цвет
+			switch (data.category) {
+				case 'софт-скил':
+					this.category.classList.add('card__category_soft');
+					break;
+
+				case 'другое':
+					this.category.classList.add('card__category_other');
+					break;
+				case 'дополнительное':
+					this.category.classList.add('card__category_additional');
+					break;
+				case 'кнопка':
+					this.category.classList.add('card__category_button');
+					break;
+				case 'хард-скил':
+					this.category.classList.add('card__category_hard');
+			}
+		}
 		if (this.title) this.title.textContent = data.title;
 		if (this.image) this.image.src = `${CDN_URL}/${data.image}`;
 		if (this.description) this.description.textContent = data.description;
@@ -63,6 +85,7 @@ export class Card extends Component<ICard> {
 				this.events.emit('item:removeFromBasket', data);
 			});
 		}
+
 		return element; // вернём получившуюся разметку элемента
 	}
 

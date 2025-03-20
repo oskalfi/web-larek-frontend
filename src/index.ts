@@ -1,7 +1,7 @@
 import './scss/styles.scss';
-import { EventEmitter } from './components/base/events';
-import { API_URL, CDN_URL, settings } from './utils/constants';
-import { Api } from './components/base/api';
+import { EventEmitter } from './components/base/Events';
+import { API_URL, CDN_URL, ERROR_MESSAGES, settings } from './utils/constants';
+import { Api } from './components/base/Api';
 import { AppModel } from './components/model/AppModel';
 import { Card } from './components/view/Card';
 import { Page } from './components/view/Page';
@@ -18,6 +18,9 @@ import {
 import { Modal } from './components/view/Modal';
 import { Basket } from './components/view/Basket';
 import { BasketModel } from './components/model/BasketModel';
+import { cloneTemplate, ensureElement } from './utils/utils';
+import { SuccessOrder } from './components/view/SuccessOrder';
+import { FailOrder } from './components/view/FailOrder';
 
 const events = new EventEmitter();
 const api = new Api(API_URL);
@@ -26,56 +29,39 @@ const appModel = new AppModel(events);
 const userData = new UserData(events);
 const basketModel = new BasketModel(events);
 
-const modalElement = document.querySelector('.modal') as HTMLElement;
+const modalElement = ensureElement('.modal');
 const modalWindow = new Modal(modalElement, events);
 
-const basketTemplate = document.querySelector('#basket') as HTMLTemplateElement;
+const basketTemplate = cloneTemplate('#basket') as HTMLElement;
 const basket = new Basket(basketTemplate, events);
 basket.buttonState(basketModel.isEmpty());
 
-const galleryCardTemplate = document.querySelector(
+const galleryCardTemplate = ensureElement(
 	'#card-catalog'
 ) as HTMLTemplateElement;
-const modalCardTemplate = document.querySelector(
-	'#card-preview'
-) as HTMLTemplateElement;
-const basketCardTemplate = document.querySelector(
-	'#card-basket'
-) as HTMLTemplateElement;
 
-const formOrderTemplate = document.querySelector(
-	'#order'
-) as HTMLTemplateElement;
+const modalCardTemplate = ensureElement('#card-preview') as HTMLTemplateElement;
+const basketCardTemplate = ensureElement('#card-basket') as HTMLTemplateElement;
+
+const formOrderTemplate = ensureElement('#order') as HTMLTemplateElement;
 const formOrder = new Form(formOrderTemplate, events);
 
-const formContactsTemplate = document.querySelector(
-	'#contacts'
-) as HTMLTemplateElement;
+const formContactsTemplate = ensureElement('#contacts') as HTMLTemplateElement;
 const formContacts = new Form(formContactsTemplate, events);
-
-// решил не выделять для модального окна успешной покупки отдельного класса,
-// т.к. из функционала у него разве что нажатие на кнопку и отображение итоговой
-// суммы заказа
-const successOrderElement = (
-	document.querySelector('#success') as HTMLTemplateElement
-).content.firstElementChild.cloneNode(true) as HTMLElement;
-successOrderElement.querySelector('button').addEventListener('click', () => {
-	modalWindow.close();
-});
 
 userData.setError({
 	fieldName: 'address',
-	errorMessage: 'Поле адрес обязательно для заполнения',
+	errorMessage: ERROR_MESSAGES.address,
 });
 
 userData.setError({
 	fieldName: 'email',
-	errorMessage: 'Введите адрес электронной почты',
+	errorMessage: ERROR_MESSAGES.email,
 });
 
 userData.setError({
 	fieldName: 'phone',
-	errorMessage: 'Введите номер телефона',
+	errorMessage: ERROR_MESSAGES.phone,
 });
 
 api
@@ -142,9 +128,11 @@ events.on<Card>('item:removeFromBasket', (product) => {
 
 events.on<Card>('basketModel:changed', (addedProduct) => {
 	basket.buttonState(basketModel.isEmpty());
-	const products = basketModel.products.map(
-		(product) => new Card(basketCardTemplate, product, events)
-	);
+	const products = basketModel.products.map((product, index) => {
+		const card = new Card(basketCardTemplate, product, events);
+		card.basketItemIndex.textContent = `${index + 1}`;
+		return card;
+	});
 	basket.displayProducts(products);
 	basket.displayTotalAmount(basketModel.getTotalPrice());
 	page.showBasketAmount(basketModel.products.length);
@@ -204,6 +192,9 @@ events.on<Event>('phone:changed', (evt) => {
 	formContacts.toggleButtonState(!!userData.email && !!userData.phone);
 });
 
+const successOrder = new SuccessOrder(cloneTemplate('#success'), events);
+const failOrder = new FailOrder(cloneTemplate('#success'), events);
+
 events.on<Event>('modal-contacts:submit', (evt) => {
 	const total: number = basketModel.getTotalPrice();
 	const itemsId: string[] = basketModel.products.map((product) => {
@@ -213,19 +204,25 @@ events.on<Event>('modal-contacts:submit', (evt) => {
 	const order: IOrder = { ...orderInformation, total: total, items: itemsId };
 	api
 		.post('/order/', order)
-		.then((data: TSuccessOrderResponse | TFailOrderResponse) => {
-			if ('error' in data) {
-				console.log('Ошибка запроса: ', data.error);
-			} else {
-				console.log('Заказ успешно оформлен! Общая стоимость: ', data.total);
-			}
+		.then((response: TSuccessOrderResponse) => {
+			modalWindow.clear();
+			successOrder.showOrderAmount(response.total);
+			modalWindow.setContent(successOrder.element);
+			formContacts.clear();
+			formOrder.clear();
+			basketModel.clear();
+		})
+		.catch((error) => {
+			modalWindow.clear();
+			modalWindow.setContent(failOrder.element);
+			formContacts.clear();
+			formOrder.clear();
+			console.error('Ошибка запроса: ', error);
 		});
-	basketModel.clear();
-	modalWindow.clear();
-	successOrderElement.querySelector(
-		'.order-success__description'
-	).textContent = `Списано ${total} синапсов`;
-	modalWindow.setContent(successOrderElement);
+});
+
+events.on<Event>('modal-success:submit', () => {
+	modalWindow.close();
 });
 
 events.on<Event>('modal:close', () => {

@@ -1,7 +1,7 @@
 @use 'variables' as *;
 @use 'mixins';
 
-.order-success {
+.order-fail {
 	@include mixins.flex(column);
 	justify-content: center;
 	align-items: center;
@@ -10,7 +10,7 @@
 
 	&::before {
 		content: ' ';
-		@include mixins.background('../images/Subtract.png');
+		@include mixins.background('../images/Substract-fail.png');
 		width: 256px;
 		height: 256px;
 	}

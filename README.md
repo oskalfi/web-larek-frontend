@@ -336,7 +336,9 @@ constructor(template: HTMLTemplateElement, data: T, events: IEvents) {
 - `title?: HTMLElement` — название товара;
 - `category?: HTMLElement` — категория товара;
 - `price?: HTMLElement` — цена товара;
-- `addToBasketButton: HTMLButtonElement` — кнопка «добавить в корзину»
+- `addToBasketButton?: HTMLButtonElement` — кнопка «добавить в корзину»;
+- `removeFromBasket?: HTMLButtonElement` — кнопка удаления из корзины;
+- `public basketItemIndex?: HTMLElement` — элемент-индекс товара в корзине;
 
 Методы:
 
@@ -345,7 +347,7 @@ constructor(template: HTMLTemplateElement, data: T, events: IEvents) {
 
 #### Класс Basket
 
-Предназначен для отображения модального окна корзины. Конструктор класса принимает инстант брокера событий и шаблон разметки корзины.
+Предназначен для отображения модального окна корзины. Конструктор класса принимает инстант брокера событий и элемент разметки корзины.
 
 Поля:
 
@@ -360,6 +362,26 @@ constructor(template: HTMLTemplateElement, data: T, events: IEvents) {
 - `displayProducts(products: Card[]): void` — отобразит товары корзины;
 - `displayTotalAmount(value: number): void` — отобразит сумму всех товаров корзины;
 - `buttonState(value: boolean): void` — управляет активностью кнопки «Оформить»;
+
+#### Класс SuccessOrder
+
+Предназначен для отображения модального окна успешной покупки. Конструктор класса принимает инстант брокера событий и элемент-контейнер с разметкой содержимого для модального окна.
+
+Поля:
+
+- `_element: HTMLElement` — содержимое модального окна;
+- `orderDescription: HTMLElement` — элемент, отображающий сумму заказа;
+- `submitButton: HTMLButtonElement` — кнопка сабмита;
+- `events: IEvents` — инстант брокера событий;
+
+Методы:
+
+- `get element(): HTMLElement` — геттер поля `_element`;
+- `showOrderAmount(amount: number): void` — устанавливает сумму заказа в поле `orderDescription`;
+
+#### Класс FailOrder extends SuccessOrder
+
+Предназначен для реализации модального окна неудачной покупки. Расширяет конструктор родительского класса.
 
 ### Слой коммуникации
 
@@ -400,6 +422,7 @@ _Создаются классами отображения._
 - `email:changed` - изменение данных в поле с почтой;
 - `phone-number:changed` - изменение данных в поле с номером телефона;
 - `modal-contacts:submit` - нажатие на кнопку «далее» в модальном окне с почтой и телефоном;
+- `modal-success:submit` — нажатие на кнопку подтверждения в модальном окне успешной покупки.
 
 ### Пример взаимодействия
 
