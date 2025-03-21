@@ -158,13 +158,7 @@ events.on<IPaymentPickEvent>('payment-method:changed', (pick) => {
 });
 
 events.on<Event>('address:changed', (evt) => {
-	const input = evt.target as HTMLInputElement;
-	userData.address = input.value;
-	if (userData.validate(input.value)) {
-		formOrder.hideInputError('address');
-	} else {
-		formOrder.showInputError('address', userData.errors.address);
-	}
+	validateInput(formOrder, evt);
 	formOrder.toggleButtonState(!!userData.payment && !!userData.address);
 });
 
@@ -174,24 +168,12 @@ events.on<Event>('modal-address:submit', (evt) => {
 });
 
 events.on<Event>('email:changed', (evt) => {
-	const input = evt.target as HTMLInputElement;
-	userData.email = input.value;
-	if (userData.validate(input.value)) {
-		formContacts.hideInputError('email');
-	} else {
-		formContacts.showInputError('email', userData.errors.email);
-	}
+	validateInput(formContacts, evt);
 	formContacts.toggleButtonState(!!userData.email && !!userData.phone);
 });
 
 events.on<Event>('phone:changed', (evt) => {
-	const input = evt.target as HTMLInputElement;
-	userData.phone = input.value;
-	if (userData.validate(input.value)) {
-		formContacts.hideInputError('phone');
-	} else {
-		formContacts.showInputError('phone', userData.errors.phone);
-	}
+	validateInput(formContacts, evt);
 	formContacts.toggleButtonState(!!userData.email && !!userData.phone);
 });
 
@@ -215,7 +197,7 @@ events.on<Event>('modal-contacts:submit', (evt) => {
 			formOrder.clear();
 			basketModel.clear();
 		})
-		.catch((error) => {
+		.catch((error: TFailOrderResponse) => {
 			modalWindow.clear();
 			modalWindow.setContent(failOrder.element);
 			formContacts.clear();
@@ -239,3 +221,13 @@ events.on<Event>('modal:close', () => {
 events.on<Event>('page:block', () => {
 	alert('Ошибка запроса на сервер. Перезагрузите страницу');
 });
+
+function validateInput(formElement: Form, event: Event): void {
+	const input = event.target as HTMLInputElement;
+	userData[input.name] = input.value;
+	if (userData.validate(input.value)) {
+		formElement.hideInputError(input.name);
+	} else {
+		formElement.showInputError(input.name, userData.errors[input.name]);
+	}
+}

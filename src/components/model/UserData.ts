@@ -2,6 +2,7 @@ import { IUserData } from '../../types';
 import { IEvents } from '../base/Events';
 
 export class UserData {
+	[key: string]: any;
 	protected data: IUserData;
 	protected events: IEvents;
 	public errors: Record<string, string>;
